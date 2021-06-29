@@ -1,0 +1,221 @@
+---
+author: "Chris Vaisnor"
+date: "2/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+load("ARE106_HW3_maize.Rdata")
+attach(D)
+```
+```{r}
+install.packages("car")
+install.packages("lmtest")
+library(car)
+library(lmtest)
+```
+```{r}
+Model1 = lm(D$Q ~ D$K + D$L, data = D)
+summary(Model1)
+```
+
+Call:
+lm(formula = D$Q ~ D$K + D$L, data = D)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-19.833  -3.541   0.264   2.749  85.087 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -4.71413    2.14740  -2.195 0.030936 *  
+D$K          3.82452    1.03947   3.679 0.000414 ***
+D$L          0.03613    0.01944   1.858 0.066657 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 11.95 on 83 degrees of freedom
+Multiple R-squared:  0.3158,	Adjusted R-squared:  0.2993 
+F-statistic: 19.16 on 2 and 83 DF,  p-value: 1.443e-07
+
+
+```{r}
+summary(D)
+```
+      year            Q                   K               L         
+ Min.   :1983   Min.   :  0.06551   Min.   :0.060   Min.   :  2.20  
+ 1st Qu.:1983   1st Qu.:  1.02634   1st Qu.:1.000   1st Qu.: 29.12  
+ Median :1983   Median :  2.12177   Median :1.500   Median : 59.25  
+ Mean   :1986   Mean   :  5.87980   Mean   :1.995   Mean   : 82.04  
+ 3rd Qu.:1989   3rd Qu.:  5.48496   3rd Qu.:2.875   3rd Qu.:101.00  
+ Max.   :1989   Max.   :108.03576   Max.   :7.000   Max.   :499.00 
+
+```{r}
+D$logQ = log(D$Q)
+D$logK = log(D$K)
+D$logL = log(D$L)
+```
+```{r}
+Model2 = lm(D$logQ ~ D$logK + D$logL, data = D)
+summary(Model2)
+```
+Call:
+lm(formula = D$logQ ~ D$logK + D$logL, data = D)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-2.29073 -0.61328  0.04355  0.66387  2.41139 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  -1.2614     0.5606  -2.250  0.02708 *  
+D$logK        0.8301     0.1599   5.192 1.45e-06 ***
+D$logL        0.4198     0.1466   2.863  0.00531 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.9745 on 83 degrees of freedom
+Multiple R-squared:  0.5297,	Adjusted R-squared:  0.5184 
+F-statistic: 46.74 on 2 and 83 DF,  p-value: 2.535e-14
+
+```{r}
+summary(D)
+```
+      year            Q                   K               L               logQ               logK        
+ Min.   :1983   Min.   :  0.06551   Min.   :0.060   Min.   :  2.20   Min.   :-2.72557   Min.   :-2.8134  
+ 1st Qu.:1983   1st Qu.:  1.02634   1st Qu.:1.000   1st Qu.: 29.12   1st Qu.: 0.02599   1st Qu.: 0.0000  
+ Median :1983   Median :  2.12177   Median :1.500   Median : 59.25   Median : 0.75203   Median : 0.4055  
+ Mean   :1986   Mean   :  5.87980   Mean   :1.995   Mean   : 82.04   Mean   : 0.73047   Mean   : 0.3738  
+ 3rd Qu.:1989   3rd Qu.:  5.48496   3rd Qu.:2.875   3rd Qu.:101.00   3rd Qu.: 1.70145   3rd Qu.: 1.0530  
+ Max.   :1989   Max.   :108.03576   Max.   :7.000   Max.   :499.00   Max.   : 4.68246   Max.   : 1.9459  
+      logL       
+ Min.   :0.7885  
+ 1st Qu.:3.3709  
+ Median :4.0817  
+ Mean   :4.0055  
+ 3rd Qu.:4.6151  
+ Max.   :6.2126 
+
+
+```{r}
+ModelQ3.2 = lm(D$logQ ~ log(D$K/D$L) + D$logL, data = D) #Q3.2
+summary(ModelQ3.2)
+```
+Call:
+lm(formula = D$logQ ~ log(D$K/D$L) + D$logL, data = D)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-2.29073 -0.61328  0.04355  0.66387  2.41139 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept)   -1.2614     0.5606  -2.250   0.0271 *  
+log(D$K/D$L)   0.8301     0.1599   5.192 1.45e-06 ***
+D$logL         1.2500     0.1294   9.661 3.12e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.9745 on 83 degrees of freedom
+Multiple R-squared:  0.5297,	Adjusted R-squared:  0.5184 
+F-statistic: 46.74 on 2 and 83 DF,  p-value: 2.535e-14
+
+
+```{r}
+confint(ModelQ3.2, level = .9) #Question 3.2 w/ 90% confidence interval
+```
+                    5 %       95 %
+(Intercept)  -2.1938696 -0.3289638
+log(D$K/D$L)  0.5641828  1.0960868
+D$logL        1.0347289  1.4651753
+
+```{r}
+D$dummy = (D$year == 1989)
+ModelQ4.2 = lm(D$logQ ~ (D$dummy*D$logK) + (D$dummy*D$logL), data = D)
+summary(ModelQ4.2)
+```
+
+Call:
+lm(formula = D$logQ ~ (D$dummy * D$logK) + (D$dummy * D$logL), 
+    data = D)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-2.51897 -0.69516  0.00924  0.74942  2.58565 
+
+Coefficients:
+                   Estimate Std. Error t value Pr(>|t|)    
+(Intercept)         -0.3356     0.9440  -0.356 0.723116    
+D$dummyTRUE         -1.2549     1.1759  -1.067 0.289121    
+D$logK               0.9765     0.2511   3.889 0.000207 ***
+D$logL               0.1402     0.2512   0.558 0.578379    
+D$dummyTRUE:D$logK  -0.1957     0.3264  -0.600 0.550506    
+D$dummyTRUE:D$logL   0.4058     0.3088   1.314 0.192628    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.9698 on 80 degrees of freedom
+Multiple R-squared:  0.5511,	Adjusted R-squared:  0.523 
+F-statistic: 19.64 on 5 and 80 DF,  p-value: 1.028e-12
+
+```{r}
+Model1.res = resid(Model1) #Extracting the residual values from Model 1!
+```
+
+```{r}
+plot(D$K, Model1.res, main="K versus Residuals", xlab = "Land in Hectares (K)", ylab = "Model 1 Residuals", abline(0,0)); grid()
+```
+
+
+```{r}
+plot(D$L, Model1.res, main="L versus Residuals", xlab = "Labor (L)", ylab = "Model 1 Residuals", abline(0,0)); grid()
+```
+
+```{r}
+Model2.res = resid(Model2) #Extracting residuals from Model 2
+```
+
+```{r}
+plot(D$K, Model2.res, main="K versus Residuals_Model2", xlab = "Land in Hectares (K)", ylab = "Model 2 Residuals", abline(0,0)); grid()
+```
+
+
+```{r}
+plot(D$L, Model2.res, main="L versus Residuals_Model2", xlab = "Labor (L)", ylab = "Model 2 Residuals", abline(0,0)); grid()
+```
+
+
+```{r}
+M1ResidSquared = Model1.res^2        # Model 1 squared residuals 
+```
+
+```{r}
+m1_het <- lm(M1ResidSquared ~ I(K) + I(K^2) + I(L) + I(L^2) + I(K*L), data = D)  # White's regression Model1
+
+R2 <- summary(m1_het)$r.squared           # R2 from White's regression
+N <- dim(D)                               # No. of observations
+W <- N[1]*R2                              # White test statistic
+c <- qchisq(1-.05,2)                      # Critical value (5% sig)
+sprintf("White Stat = %f. Crit Val = %f. Reject null of homoskedasticy: %s", W,c,as.character(W>c))
+```
+
+[1] "White Stat = 30.672259. Crit Val = 5.991465. Reject null of homoskedasticy: TRUE"
+
+```{r}
+M2ResidSquared = Model2.res^2 # Model 2 squared residuals
+```
+
+```{r}
+m2_het <- lm(M2ResidSquared ~ I(logK) + I(logK^2) + I(logL) + I(logL^2) + I(logK*logL), data = D)  # White's regression Model2
+
+R2 <- summary(m2_het)$r.squared           # R2 from White's regression
+N <- dim(D)                               # No. of observations
+W <- N[1]*R2                              # White test statistic
+c <- qchisq(1-.05,2)                      # Critical value (5% sig)
+sprintf("White Stat = %f. Crit Val = %f. Reject null of homoskedasticy: %s", W,c,as.character(W>c))
+```
+
+[1] "White Stat = 6.562430. Crit Val = 5.991465. Reject null of homoskedasticy: TRUE"

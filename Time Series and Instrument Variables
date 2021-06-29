@@ -1,0 +1,301 @@
+---
+title: "Regression with Time-Series"
+author: "Chris Vaisnor"
+date: "3/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+load("ARE106_Final_Electricity.RData")
+```
+
+```{r}
+library(lmtest)     # Testing Linear Regression Models
+library(dynlm)      # Dynamic Linear Regression
+library(sandwich)   # Robust Covariance Matrix Estimators
+```
+
+```{r}
+elec <- ts(D[,"kwh_daily"])
+temp <- ts(D[,"temp_avg"])
+```
+
+```{r}
+log_elec = log(elec)
+log_temp = log(temp)
+```
+
+```{r}
+Model1 = dynlm(log_elec ~ log_temp)
+summary(Model1)
+```
+
+Time series regression with "ts" data:
+Start = 1, End = 153
+
+Call:
+dynlm(formula = log_elec ~ log_temp)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.17215 -0.17224  0.03223  0.20272  0.50282 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  -8.1008     1.2036  -6.731  3.3e-10 ***
+log_temp      2.8383     0.2811  10.095  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2791 on 151 degrees of freedom
+Multiple R-squared:  0.403,	Adjusted R-squared:  0.399 
+F-statistic: 101.9 on 1 and 151 DF,  p-value: < 2.2e-16
+
+```{r}
+confint(Model1, level = .95)
+```
+
+                 2.5 %    97.5 %
+(Intercept) -10.478869 -5.722808
+log_temp      2.282794  3.393777
+
+```{r}
+e <- resid(Model1)                      # Extract residuals
+m1_aux <- dynlm(e ~ L(e) + log_temp)       # Estimate auxiliary regression
+T <- dim(elec)[1]                      # Number of time periods in our data
+BG.test <- (T-1)*summary(m1_aux)$r.squared  # BG test statistic
+c <- qchisq(1-.05,1)                # Critical value (5% sig) with df = 1
+sprintf("Breusch-Godrey Stat = %f. Crit Val = %f. Reject null of no autocorrelation: %s", BG.test,c,as.character(BG.test>c))
+```
+
+[1] "Breusch-Godrey Stat = 5.422878. Crit Val = 3.841459. Reject null of no autocorrelation: TRUE"
+
+```{r}
+coeftest(Model1, vcov = NeweyWest(Model1, lag = 45, prewhite = FALSE))
+```
+
+t test of coefficients:
+
+            Estimate Std. Error t value  Pr(>|t|)    
+(Intercept)  -8.1008     2.0069 -4.0366 8.595e-05 ***
+log_temp      2.8383     0.4769  5.9515 1.785e-08 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+```{r}
+coefci(Model1, vcov = NeweyWest(Model1, lag = 45, prewhite = FALSE))
+```
+
+                 2.5 %    97.5 %
+(Intercept) -12.065973 -4.135703
+log_temp      1.896019  3.780552
+
+```{r}
+# Question 2.8
+e <- residuals(Model1)
+m1_FGLE <- dynlm(e ~ L(e))           # Estimate auxiliary regression
+r <- coefficients(m1_FGLE)["L(e)"]   # Extract coefficient on lagged residual
+FGLE <- dynlm(log_elec - r*L(log_elec) ~ I(log_temp - r*L(log_temp)))    # FGLS estimation
+coeftest(FGLE)
+```
+
+t test of coefficients:
+
+                              Estimate Std. Error t value  Pr(>|t|)    
+(Intercept)                   -6.26727    1.12441 -5.5738 1.127e-07 ***
+I(log_temp - r * L(log_temp))  2.75158    0.32386  8.4962 1.797e-14 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+```{r}
+bgtest(FGLE)
+```
+
+	Breusch-Godfrey test for serial correlation of order up to 1
+
+data:  FGLE
+LM test = 0.09474, df = 1, p-value = 0.7582
+
+
+-----End of current dataset-----
+
+```{r}
+library(foreign)
+library(AER)    # Applied Econometrics with R
+library(stargazer)
+```
+
+```{r}
+D <- read.dta("http://fmwww.bc.edu/ec-p/data/wooldridge/card.dta")
+attach(D)
+```
+
+```{r}
+log_wage = log(D$wage)
+```
+
+```{r}
+Model1 = lm(log_wage ~ D$educ, data = D)
+summary(Model1)
+```
+
+Call:
+lm(formula = log_wage ~ D$educ, data = D)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.73799 -0.27764  0.02373  0.28839  1.46080 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  5.57088    0.03883  143.47   <2e-16 ***
+D$educ       0.05209    0.00287   18.15   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.4214 on 3008 degrees of freedom
+Multiple R-squared:  0.09874,	Adjusted R-squared:  0.09844 
+F-statistic: 329.5 on 1 and 3008 DF,  p-value: < 2.2e-16
+
+```{r}
+Model2 = lm(log_wage ~ D$educ + D$exper + D$south + D$married + D$smsa, data = D)
+summary(Model2)
+```
+
+Call:
+lm(formula = log_wage ~ D$educ + D$exper + D$south + D$married + 
+    D$smsa, data = D)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.71730 -0.23157  0.01881  0.24239  1.42616 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  4.972809   0.063930   77.79   <2e-16 ***
+D$educ       0.077338   0.003470   22.29   <2e-16 ***
+D$exper      0.034437   0.002246   15.33   <2e-16 ***
+D$south     -0.175296   0.014439  -12.14   <2e-16 ***
+D$married   -0.039894   0.003423  -11.65   <2e-16 ***
+D$smsa       0.167868   0.015660   10.72   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.3756 on 2997 degrees of freedom
+  (7 observations deleted due to missingness)
+Multiple R-squared:  0.2844,	Adjusted R-squared:  0.2832 
+F-statistic: 238.2 on 5 and 2997 DF,  p-value: < 2.2e-16
+
+```{r}
+Stage1 = lm(D$educ ~ D$nearc4 + D$exper + D$south + D$married + D$smsa, data = D)
+summary(Stage1)
+```
+
+Call:
+lm(formula = D$educ ~ D$nearc4 + D$exper + D$south + D$married + 
+    D$smsa, data = D)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-7.4402 -1.4648 -0.1102  1.2977  6.0081 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 16.912239   0.132858 127.296  < 2e-16 ***
+D$nearc4     0.333219   0.083901   3.972 7.31e-05 ***
+D$exper     -0.417499   0.009012 -46.329  < 2e-16 ***
+D$south     -0.567877   0.076062  -7.466 1.08e-13 ***
+D$married   -0.099161   0.017882  -5.545 3.19e-08 ***
+D$smsa       0.391400   0.086344   4.533 6.04e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 1.972 on 2997 degrees of freedom
+  (7 observations deleted due to missingness)
+Multiple R-squared:  0.4583,	Adjusted R-squared:  0.4574 
+F-statistic: 507.1 on 5 and 2997 DF,  p-value: < 2.2e-16
+
+```{r}
+Stage1Fitted = fitted.values(Stage1)
+```
+
+```{r}
+Stage2 = lm(log_wage ~ Stage1Fitted + D$exper + D$south + D$married + D$smsa, data = D)
+summary(Stage2)
+```
+
+Error in model.frame.default(formula = log_wage ~ Stage1Fitted + D$exper + : variable lengths differ (found for 'Stage1Fitted')
+
+```{r}
+#I keep getting an error because 7 values are deleted when doing the 2 stage regression manually with the "lm" function. I will attempt another method with ivreg command. 
+
+Stage2Version2 = ivreg(log_wage ~ D$educ + D$exper + D$south + D$married + D$smsa | D$exper + D$south + D$married + D$smsa + D$nearc4, data = D)
+summary(Stage2Version2)
+```
+
+Call:
+ivreg(formula = log_wage ~ D$educ + D$exper + D$south + D$married + 
+    D$smsa | D$exper + D$south + D$married + D$smsa + D$nearc4, 
+    data = D)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.88789 -0.24333  0.01933  0.24557  1.35165 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  4.135643   0.846550   4.885 1.09e-06 ***
+D$educ       0.126339   0.049529   2.551  0.01080 *  
+D$exper      0.054901   0.020761   2.644  0.00822 ** 
+D$south     -0.144958   0.034026  -4.260 2.11e-05 ***
+D$married   -0.034991   0.006077  -5.758 9.39e-09 ***
+D$smsa       0.143254   0.029619   4.837 1.39e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.3879 on 2997 degrees of freedom
+Multiple R-Squared: 0.2368,	Adjusted R-squared: 0.23
+
+```{r}
+stargazer(Model2, Stage2Version2, type = "text")
+```
+
+======================================================================
+                                         Dependent variable:          
+                                --------------------------------------
+                                               log_wage               
+                                           OLS            instrumental
+                                                            variable  
+                                           (1)                (2)     
+----------------------------------------------------------------------
+educ                                    0.077***            0.126**   
+                                         (0.003)            (0.050)   
+                                                                      
+exper                                   0.034***            0.055***  
+                                         (0.002)            (0.021)   
+                                                                      
+south                                   -0.175***          -0.145***  
+                                         (0.014)            (0.034)   
+                                                                      
+married                                 -0.040***          -0.035***  
+                                         (0.003)            (0.006)   
+                                                                      
+smsa                                    0.168***            0.143***  
+                                         (0.016)            (0.030)   
+                                                                      
+Constant                                4.973***            4.136***  
+                                         (0.064)            (0.847)   
+                                                                      
+----------------------------------------------------------------------
+Observations                              3,003              3,003    
+R2                                        0.284              0.237    
+Adjusted R2                               0.283              0.236    
+Residual Std. Error (df = 2997)           0.376              0.388    
+F Statistic                     238.230*** (df = 5; 2997)             
+======================================================================
+Note:                                      *p<0.1; **p<0.05; ***p<0.01

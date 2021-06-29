@@ -1,0 +1,196 @@
+---
+author: "Chris Vaisnor"
+date: "3/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(lmtest)     # Testing Linear Regression Models
+library(dynlm)      # Dynamic Linear Regression
+library(sandwich)   # Robust Covariance Matrix Estimators
+```
+
+```{r}
+Q <- ts(D[,"Q"], start = 1926, frequency = 1)
+P <- ts(D[,"P"], start = 1926, frequency = 1)
+```
+
+```{r}
+logQ = log(Q)
+logP = log(P)
+```
+
+```{r}
+Model1 = dynlm(logQ ~ logP) # Q2.1
+summary(Model1)
+```
+
+Time series regression with "ts" data:
+Start = 1926, End = 2016
+
+Call:
+dynlm(formula = logQ ~ logP)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.05039 -0.22202 -0.00422  0.25325  0.86415 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -1.55456    0.26352  -5.899 6.48e-08 ***
+logP        -0.91090    0.07526 -12.103  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.4013 on 89 degrees of freedom
+Multiple R-squared:  0.622,	Adjusted R-squared:  0.6178 
+F-statistic: 146.5 on 1 and 89 DF,  p-value: < 2.2e-16
+
+
+```{r}
+confint(Model1, level = .95) # Q2.1
+```
+                2.5 %     97.5 %
+(Intercept) -2.078160 -1.0309628
+logP        -1.060443 -0.7613474
+
+```{r}
+coeftest(Model1)
+```
+t test of coefficients:
+
+             Estimate Std. Error  t value  Pr(>|t|)    
+(Intercept) -1.554562   0.263515  -5.8993  6.48e-08 ***
+logP        -0.910895   0.075264 -12.1027 < 2.2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+```{r}
+e <- resid(Model1)                    # Extract residuals
+mod1_aux <- dynlm(e ~ L(e))   # Estimate auxiliary regression
+summary(mod1_aux)
+```
+Time series regression with "ts" data:
+Start = 1927, End = 2016
+
+Call:
+dynlm(formula = e ~ L(e))
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.51153 -0.09502 -0.01306  0.08434  0.56231 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.01061    0.02045   0.519    0.605    
+L(e)         0.86540    0.05151  16.802   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.194 on 88 degrees of freedom
+Multiple R-squared:  0.7624,	Adjusted R-squared:  0.7596 
+F-statistic: 282.3 on 1 and 88 DF,  p-value: < 2.2e-16
+
+```{r}
+T <- dim(Q)[1] # Number of time periods in our data
+```
+
+```{r}
+BG.test <- (T-1)*summary(mod1_aux)$r.squared  # BG test statistic
+c <- qchisq(1-.05,1)                # Critical value (5% sig) with df = 1
+sprintf("Breusch-Godrey Stat = %f. Crit Val = %f. Reject null of homoskedasticy: %s", BG.test,c,as.character(BG.test>c))
+```
+
+[1] "Breusch-Godrey Stat = 68.611517. Crit Val = 3.841459. Reject null of homoskedasticy: TRUE"
+
+```{r}
+bgtest(Model1)
+```
+	Breusch-Godfrey test for serial correlation of order up to 1
+
+data:  Model1
+LM test = 67.702, df = 1, p-value < 2.2e-16
+
+```{r}
+coeftest(Model1, vcov = NeweyWest(Model1, lag = 60, prewhite = FALSE))
+```
+
+t test of coefficients:
+
+             Estimate Std. Error  t value  Pr(>|t|)    
+(Intercept) -1.554562   0.354589  -4.3841 3.181e-05 ***
+logP        -0.910895   0.080176 -11.3613 < 2.2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+```{r}
+coeftest(Model1, vcov = vcovHAC)
+```
+t test of coefficients:
+
+             Estimate Std. Error t value  Pr(>|t|)    
+(Intercept) -1.554562   0.406948 -3.8200 0.0002465 ***
+logP        -0.910895   0.097719 -9.3216 8.105e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+```{r}
+plot(D$year, logQ, main = "Corn Demand", xlab = "Year", ylab = "Log of Corn Demand")
+plot(D$year, logP, main = "Real Prices", xlab = "Year", ylab = "Log of Real Prices")
+```
+
+```{r}
+Model2 = dynlm(logQ ~ logP + trend(logQ))
+summary(Model2)
+```
+
+Time series regression with "ts" data:
+Start = 1926, End = 2016
+
+Call:
+dynlm(formula = logQ ~ logP + trend(logQ))
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.57015 -0.07482 -0.00153  0.11963  0.30687 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.1510100  0.1296497   1.165  0.24727    
+logP        -0.1288663  0.0463055  -2.783  0.00659 ** 
+trend(logQ)  0.0216818  0.0009853  22.004  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1583 on 88 degrees of freedom
+Multiple R-squared:  0.9419,	Adjusted R-squared:  0.9405 
+F-statistic: 712.9 on 2 and 88 DF,  p-value: < 2.2e-16
+
+```{r}
+confint(Model2, level = .95)
+```
+                  2.5 %      97.5 %
+(Intercept) -0.10664155  0.40866160
+logP        -0.22088883 -0.03684385
+trend(logQ)  0.01972358  0.02363993
+
+
+```{r}
+bgtest(Model2)
+```
+
+	Breusch-Godfrey test for serial correlation of order up to 1
+
+data:  Model2
+LM test = 3.4175, df = 1, p-value = 0.06451
+
+```{r}
+Model3 = dynlm(logQ - r*L(logQ) ~ I(1-r) + (logP - r*L(logP)))
+summary(Model3)
+```
+
